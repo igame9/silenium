@@ -1,5 +1,4 @@
 import sys
-
 from silenium import Ui_MainWindow
 from PySide2 import QtWidgets
 
