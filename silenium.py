@@ -11,6 +11,7 @@ from PyQt5 import QtCore
 
 class Ui_MainWindow(object):
     def __init__(self, MainWindow):
+        self.countEnds = []
         self.centralwidget = QWidget(MainWindow)
         self.progressBar = QProgressBar(self.centralwidget)
         self.pushButton = QPushButton(self.centralwidget)
@@ -42,7 +43,7 @@ class Ui_MainWindow(object):
             u"187), stop:1 rgba(255, 255, 255, 255))")
         self.progressBar.setObjectName(u"progressBar")
         self.progressBar.setGeometry(QRect(20, 490, 441, 23))
-        self.progressBar.setMaximum(10)  # максимум
+        self.progressBar.setMaximum(1000)  # максимум
         self.progressBar.setValue(0)
         self.progressBar.setOrientation(Qt.Horizontal)
         self.pushButton.setObjectName(u"pushButton")
@@ -76,9 +77,21 @@ class Ui_MainWindow(object):
         half = int(len(a_list) / 2)
         return a_list[:half], a_list[half:]
 
-    def on_update(self, data):
+    def onUpdate(self, data):
         self.store = data + self.store
         self.progressBar.setValue(self.store)
+
+    def buttonTrigger(self, infoButton):
+        # print(infoButton)
+        if infoButton == "Конец":
+            self.countEnds.append(infoButton)
+        else:
+            self.pushButton.setText(infoButton)
+            self.pushButton.setEnabled(False)
+        if len(self.countEnds) == 2:
+            self.pushButton.setEnabled(True)
+            self.pushButton.setText("Старт")
+        # print(len(self.countEnds))
 
     def start(self):
         scrollCounter = 0
@@ -87,11 +100,10 @@ class Ui_MainWindow(object):
         counter = 0
         driver1 = driver.initDriverChrome()
         driver1.get("https://ria.ru/world/")
-        driver1.implicitly_wait(1)
+        driver1.implicitly_wait(2)
 
         button = driver1.find_element_by_class_name("list-more")
         driver1.execute_script("window.scrollTo(0, document.body.scrollHeight);")  # прокрутить вниз
-        driver1.implicitly_wait(2)
         ActionChains(driver1).move_to_element(button).click().perform()  # элемент +20 находился вне поля зрения
 
         print("scrollCounter")
@@ -104,7 +116,6 @@ class Ui_MainWindow(object):
         print("counter ref")
         for refs in driver1.find_element_by_class_name("rubric-list").find_elements_by_class_name(
                 "list-item"):  # забираю уже в прогруженной странице элементы(тег и название статьи и ссылки на статьи),
-            # driver.implicitly_wait(1)
             counter = counter + 1
             print(counter)
             newsRef.append(refs.find_element_by_tag_name("a").get_attribute("href"))
@@ -112,21 +123,26 @@ class Ui_MainWindow(object):
                 break
 
         print("counter Ready")
+        driver1.close()
         firstList, secondList = self.splitList(newsRef)
         driver2 = driver.initDriverChrome()
+        driver3 = driver.initDriverChrome()
 
         # Создаю потоки
-        self.task1 = SlowTask(driver1, firstList, "firstThread")
-        self.task1.updated.connect(self.on_update)
+        self.task1 = SlowTask(driver3, firstList, "firstThread")
+        self.task1.updated.connect(self.onUpdate)
+        self.task1.buttonSignal.connect(self.buttonTrigger)
         self.task1.start()
 
         self.task2 = SlowTask(driver2, secondList, "secondThread")
-        self.task2.updated.connect(self.on_update)
+        self.task2.updated.connect(self.onUpdate)
+        self.task2.buttonSignal.connect(self.buttonTrigger)
         self.task2.start()
 
 
 class SlowTask(QtCore.QThread):
     updated = QtCore.pyqtSignal(int)
+    buttonSignal = QtCore.pyqtSignal(str)
 
     def __init__(self, typeDriver, newRefList, threadNumber):
         super(SlowTask, self).__init__()
@@ -143,6 +159,7 @@ class SlowTask(QtCore.QThread):
         return True
 
     def run(self):
+        self.buttonSignal.emit("Выполнение...")
         xmlData = etree.Element("doc")
         # sourceXmlData = etree.SubElement(xmlData, "source")
         # sourceXmlData.text = etree.CDATA(driver.current_url) ; запись источника данных
@@ -173,7 +190,6 @@ class SlowTask(QtCore.QThread):
         counterReady = 0
         for ref in self.newRefList:
             self.typeDriver.get(ref)
-            # driver.implicitly_wait(1)
             nameNews = self.typeDriver.find_element_by_class_name("article__title").text
             # print(nameNews)
             if not self.check_exists_by_class(self.typeDriver):
@@ -203,4 +219,5 @@ class SlowTask(QtCore.QThread):
             newsTemp.clear()
             tagTemp.clear()
             self.updated.emit(int(self.percent))
+        self.buttonSignal.emit("Конец")
         self.typeDriver.close()
