@@ -107,7 +107,7 @@ class Ui_MainWindow(object):
         ActionChains(driver1).move_to_element(button).click().perform()  # элемент +20 находился вне поля зрения
 
         print("scrollCounter")
-        while scrollCounter != 1:  # прогружаю страницу
+        while scrollCounter != 150:  # прогружаю страницу
             scrollCounter = scrollCounter + 1
             driver1.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(0.5)
@@ -119,7 +119,7 @@ class Ui_MainWindow(object):
             counter = counter + 1
             print(counter)
             newsRef.append(refs.find_element_by_tag_name("a").get_attribute("href"))
-            if counter == 10:
+            if counter == 1000:
                 break
 
         print("counter Ready")
@@ -175,6 +175,16 @@ class SlowTask(QtCore.QThread):
         titleXmlData.attrib['type'] = "str"
         titleXmlData.attrib['auto'] = "true"
 
+        dateAndTime = etree.SubElement(xmlData, "DateAndTime")
+        dateAndTime.attrib['verify'] = "true"
+        dateAndTime.attrib['type'] = "str"
+        dateAndTime.attrib['auto'] = "true"
+
+        views = etree.SubElement(xmlData, "views")
+        views.attrib['verify'] = "true"
+        views.attrib['type'] = "str"
+        views.attrib['auto'] = "true"
+
         textXmlData = etree.SubElement(xmlData, "text")
         textXmlData.attrib['verify'] = "true"
         textXmlData.attrib['type'] = "str"
@@ -191,6 +201,8 @@ class SlowTask(QtCore.QThread):
         for ref in self.newRefList:
             self.typeDriver.get(ref)
             nameNews = self.typeDriver.find_element_by_class_name("article__title").text
+            dateWithTime = self.typeDriver.find_element_by_class_name("article__info-date").text
+            statisticView = self.typeDriver.find_element_by_class_name("statistic").text
             # print(nameNews)
             if not self.check_exists_by_class(self.typeDriver):
                 for news in self.typeDriver.find_element_by_class_name("article__longread").find_elements_by_class_name(
@@ -205,6 +217,8 @@ class SlowTask(QtCore.QThread):
                         continue
             unionText = ''.join(newsTemp)  # для соедин эл-тов списка из temp в newsText, тк a=b=c
             titleXmlData.text = nameNews
+            dateAndTime.text = dateWithTime
+            views.text = statisticView
             textXmlData.text = etree.CDATA(unionText)
             for tag in self.typeDriver.find_element_by_class_name("article__tags").find_elements_by_class_name(
                     "article__tags-item"):
