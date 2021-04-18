@@ -202,7 +202,10 @@ class SlowTask(QtCore.QThread):
             self.typeDriver.get(ref)
             nameNews = self.typeDriver.find_element_by_class_name("article__title").text
             dateWithTime = self.typeDriver.find_element_by_class_name("article__info-date").text
-            statisticView = self.typeDriver.find_element_by_class_name("statistic").text
+            try:
+                statisticView = self.typeDriver.find_element_by_class_name("statistic").text
+            except NoSuchElementException:
+                statisticView = "Нету информации"
             # print(nameNews)
             if not self.check_exists_by_class(self.typeDriver):
                 for news in self.typeDriver.find_element_by_class_name("article__longread").find_elements_by_class_name(
