@@ -15,7 +15,6 @@ class Ui_MainWindow(object):
         self.centralwidget = QWidget(MainWindow)
         self.progressBar = QProgressBar(self.centralwidget)
         self.pushButton = QPushButton(self.centralwidget)
-        self.textEdit = QTextEdit(self.centralwidget)
         self.store = 0
 
     def setupUi(self, MainWindow):
@@ -61,10 +60,6 @@ class Ui_MainWindow(object):
                                       "QPushButton:hover {\n"
                                       "background-color:silver;\n"
                                       "}")
-        self.textEdit.setObjectName(u"textEdit")
-        self.textEdit.setGeometry(QRect(10, 20, 521, 311))
-        self.textEdit.setStyleSheet(u"background-color:white")
-        self.textEdit.setReadOnly(True)
         MainWindow.setCentralWidget(self.centralwidget)
         self.retranslateUi(MainWindow)
         self.pushButton.clicked.connect(self.start)
@@ -73,9 +68,9 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Silenium", None))
         self.pushButton.setText(QCoreApplication.translate("MainWindow", u"\u0421\u0442\u0430\u0440\u0442", None))
 
-    def splitList(self, a_list):
-        half = int(len(a_list) / 2)
-        return a_list[:half], a_list[half:]
+    def splitList(self, Alist):
+        half = int(len(Alist) / 2)
+        return Alist[:half], Alist[half:]
 
     def onUpdate(self, data):
         self.store = data + self.store
@@ -94,8 +89,36 @@ class Ui_MainWindow(object):
         # print(len(self.countEnds))
 
     def start(self):
+        self.pushButton.setEnabled(False)
+        firstStart = FirstStart()
+        firstStart.finished.connect(lambda: self.onFinishedCollect(firstStart.newsRef))
+        firstStart.start()
+
+    def onFinishedCollect(self, listWithRef):
+        self.pushButton.setEnabled(True)
+        firstList, secondList = self.splitList(listWithRef)
+        driver2 = driver.initDriverChrome()
+        driver3 = driver.initDriverChrome()
+
+        # Создаю потоки
+        self.task1 = SlowTask(driver3, firstList, "firstThread")
+        self.task1.updated.connect(self.onUpdate)
+        self.task1.buttonSignal.connect(self.buttonTrigger)
+        self.task1.start()
+
+        self.task2 = SlowTask(driver2, secondList, "secondThread")
+        self.task2.updated.connect(self.onUpdate)
+        self.task2.buttonSignal.connect(self.buttonTrigger)
+        self.task2.start()
+
+
+class FirstStart(QtCore.QThread):
+    def __init__(self):
+        super(FirstStart, self).__init__()
+        self.newsRef = []
+
+    def run(self):
         scrollCounter = 0
-        newsRef = []
 
         counter = 0
         driver1 = driver.initDriverChrome()
@@ -118,26 +141,11 @@ class Ui_MainWindow(object):
                 "list-item"):  # забираю уже в прогруженной странице элементы(тег и название статьи и ссылки на статьи),
             counter = counter + 1
             print(counter)
-            newsRef.append(refs.find_element_by_tag_name("a").get_attribute("href"))
+            self.newsRef.append(refs.find_element_by_tag_name("a").get_attribute("href"))
             if counter == 1000:
                 break
-
         print("counter Ready")
         driver1.close()
-        firstList, secondList = self.splitList(newsRef)
-        driver2 = driver.initDriverChrome()
-        driver3 = driver.initDriverChrome()
-
-        # Создаю потоки
-        self.task1 = SlowTask(driver3, firstList, "firstThread")
-        self.task1.updated.connect(self.onUpdate)
-        self.task1.buttonSignal.connect(self.buttonTrigger)
-        self.task1.start()
-
-        self.task2 = SlowTask(driver2, secondList, "secondThread")
-        self.task2.updated.connect(self.onUpdate)
-        self.task2.buttonSignal.connect(self.buttonTrigger)
-        self.task2.start()
 
 
 class SlowTask(QtCore.QThread):
