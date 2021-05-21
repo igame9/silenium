@@ -133,7 +133,7 @@ class FirstStart(QtCore.QThread):
         time.sleep(5)
 
         print("scrollCounter")
-        while scrollCounter != 1:  # прогружаю страницу
+        while scrollCounter != 50:  # прогружаю страницу
             scrollCounter = scrollCounter + 1
             driver1.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             driver1.execute_script("arguments[0].click();", button)
@@ -147,7 +147,7 @@ class FirstStart(QtCore.QThread):
             counter = counter + 1
             print(counter)
             self.newsRef.append(refs.find_element_by_tag_name("a").get_attribute("href"))
-            if counter == 2:
+            if counter == 1000:
                 break
         print("counter Ready")
         driver1.close()
