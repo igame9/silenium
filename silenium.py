@@ -5,6 +5,8 @@ from lxml import etree
 from selenium.common.exceptions import NoSuchElementException
 import time
 from selenium.webdriver import ActionChains
+import os
+
 import driver
 from PyQt5 import QtCore
 
@@ -128,11 +130,14 @@ class FirstStart(QtCore.QThread):
         button = driver1.find_element_by_class_name("list-more")
         driver1.execute_script("window.scrollTo(0, document.body.scrollHeight);")  # прокрутить вниз
         ActionChains(driver1).move_to_element(button).click().perform()  # элемент +20 находился вне поля зрения
+        time.sleep(5)
 
         print("scrollCounter")
-        while scrollCounter != 150:  # прогружаю страницу
+        while scrollCounter != 1:  # прогружаю страницу
             scrollCounter = scrollCounter + 1
             driver1.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            driver1.execute_script("arguments[0].click();", button)
+            driver1.execute_script("scroll(0, -50);")
             time.sleep(0.5)
             print(scrollCounter)
 
@@ -142,7 +147,7 @@ class FirstStart(QtCore.QThread):
             counter = counter + 1
             print(counter)
             self.newsRef.append(refs.find_element_by_tag_name("a").get_attribute("href"))
-            if counter == 1000:
+            if counter == 2:
                 break
         print("counter Ready")
         driver1.close()
@@ -165,6 +170,12 @@ class SlowTask(QtCore.QThread):
         except NoSuchElementException:
             return False
         return True
+
+    def checkExistDir(self):
+        if os.path.exists("./XML"):
+            return True
+        else:
+            return False
 
     def run(self):
         self.buttonSignal.emit("Выполнение...")
@@ -237,8 +248,17 @@ class SlowTask(QtCore.QThread):
             stringTag = ','.join(tagTemp)
             tagsXmlData.text = stringTag
             xmlTree = etree.ElementTree(xmlData)
-            xmlTree.write(r"" + self.threadNumber + str(counterReady) + ".xml", encoding="utf-8", xml_declaration=True,
-                          pretty_print=True)
+
+            # print(self.checkExistDir())
+            if self.checkExistDir():
+                xmlTree.write("./XML/" + self.threadNumber + str(counterReady) + ".xml", encoding="utf-8",
+                              xml_declaration=True,
+                              pretty_print=True)
+            else:
+                os.mkdir("XML")
+                xmlTree.write("./XML/" + self.threadNumber + str(counterReady) + ".xml", encoding="utf-8",
+                              xml_declaration=True,
+                              pretty_print=True)
             print(counterReady)
             counterReady = counterReady + 1
             newsTemp.clear()
